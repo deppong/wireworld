@@ -1,5 +1,5 @@
-# Wolfram Elementary Cellular Automata
-This is an Elementary Cellular Automata simulator written in Rust
+# Wireworld
+wip
 
 # Building
 

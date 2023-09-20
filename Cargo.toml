@@ -1,5 +1,5 @@
 [package]
-name = "wolfram_ca"
+name = "wireworld"
 version = "0.1.0"
 authors = ["deppong <30512867+deppong@users.noreply.github.com>"]
 edition = "2018"
