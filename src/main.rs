@@ -75,18 +75,18 @@ fn main() {
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    const board_w: u32 = 64;
-    const board_h: u32 = 64;
+    const BOARD_W: u32 = 64;
+    const BOARD_H: u32 = 64;
 
-    const res: u32 = WIDTH/board_w;
+    const res: u32 = WIDTH/BOARD_W;
     
     let mut old_cells: Vec<Cell> = vec![];
-    for y in 0..board_h {
-        for x in 0..board_w {
+    for y in 0..BOARD_H {
+        for x in 0..BOARD_W {
             old_cells.push(Cell {
                 x: x,
                 y: y,
-                state: State::Wire,
+                state: State::Head,
             });
         }
     }
@@ -106,11 +106,17 @@ fn main() {
 
         // wireworld loop
 
+        for cell in new_cells.iter_mut().filter(|x| x.state != State::Empty) {
+            cell.tick(vec![Cell{x:0,y:0,state: State::Empty};0]);
+        }
+
+        
+
         // draw loop
 
-        for i in 0..board_h {
-            for j in 0..board_w {
-                let color = match new_cells[(i + j*board_w) as usize].state {
+        for i in 0..BOARD_H {
+            for j in 0..BOARD_W {
+                let color = match new_cells[(i + j*BOARD_W) as usize].state {
                     State::Empty => Color::BLACK,
                     State::Head => Color::CYAN,
                     State::Tail => Color::RED,
