@@ -1,5 +1,7 @@
 extern crate sdl2;
 
+use std::{time::*, thread};
+
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::pixels::Color;
 use sdl2::event::Event;
@@ -92,6 +94,12 @@ fn main() {
     }
     let mut new_cells: Vec<Cell> = old_cells.clone();
 
+    let mut last_time = Instant::now();
+
+    let mut paused = true;
+
+    let dt = 0.0001;
+
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -99,6 +107,9 @@ fn main() {
                 Event::KeyDown { keycode: Some(Keycode::Escape), ..} => {
                     break 'running;
                 },
+
+                Event::KeyDown { keycode: Some(Keycode::Space), .. } => { paused = !paused; break;},
+
                 _ => {}
             }
         }
@@ -106,14 +117,13 @@ fn main() {
 
         // wireworld loop
 
-        for cell in new_cells.iter_mut().filter(|x| x.state != State::Empty) {
-            cell.tick(vec![Cell{x:0,y:0,state: State::Empty};0]);
+        if !paused {
+            for cell in new_cells.iter_mut().filter(|x| x.state != State::Empty) {
+                cell.tick(vec![Cell{x:0,y:0,state: State::Empty};0]);
+            }
         }
 
-        
-
         // draw loop
-
         for i in 0..BOARD_H {
             for j in 0..BOARD_W {
                 let color = match new_cells[(i + j*BOARD_W) as usize].state {
@@ -126,6 +136,11 @@ fn main() {
 
                 draw_rect(i*res, j*res, res-1, res-1, color, &mut framedata);
             }
+        }
+
+        if Instant::now() - last_time < Duration::from_secs_f32(1.0 * dt) {
+            thread::sleep(Duration::from_secs_f32(1.0 * dt) - (Instant::now() - last_time));
+            last_time = Instant::now();
         }
 
         canvas.clear();
