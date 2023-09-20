@@ -82,17 +82,8 @@ fn main() {
 
     const res: u32 = WIDTH/BOARD_W;
     
-    let mut old_cells: Vec<Cell> = vec![];
-    for y in 0..BOARD_H {
-        for x in 0..BOARD_W {
-            old_cells.push(Cell {
-                x: x,
-                y: y,
-                state: State::Head,
-            });
-        }
-    }
-    let mut new_cells: Vec<Cell> = old_cells.clone();
+    let mut old_board = [State::Empty; (BOARD_W*BOARD_H) as usize];
+    let mut new_board = [State::Head; (BOARD_W*BOARD_H) as usize];
 
     let mut last_time = Instant::now();
 
@@ -118,20 +109,24 @@ fn main() {
         // wireworld loop
 
         if !paused {
-            for cell in new_cells.iter_mut().filter(|x| x.state != State::Empty) {
-                cell.tick(vec![Cell{x:0,y:0,state: State::Empty};0]);
+            for cell in new_board.iter_mut().filter(|x| **x != State::Empty) {
+                match cell {
+                    State::Head => *cell = State::Tail,
+                    State::Tail => *cell = State::Wire,
+                    State::Wire => *cell = State::Wire,
+                    _ => ()
+                }
             }
         }
 
         // draw loop
         for i in 0..BOARD_H {
             for j in 0..BOARD_W {
-                let color = match new_cells[(i + j*BOARD_W) as usize].state {
+                let color = match new_board[(i + j*BOARD_W) as usize] {
                     State::Empty => Color::BLACK,
                     State::Head => Color::CYAN,
                     State::Tail => Color::RED,
                     State::Wire => Color::YELLOW,
-                    _ => Color::BLACK
                 };
 
                 draw_rect(i*res, j*res, res-1, res-1, color, &mut framedata);
