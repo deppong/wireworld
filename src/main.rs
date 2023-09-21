@@ -7,40 +7,12 @@ use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 
+pub mod cell;
+use cell::*;
+
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 800;
-
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
-enum State {
-    Empty,
-    Head,
-    Tail,
-    Wire
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Cell {
-    x: u32,
-    y: u32,
-    state: State,
-}
-
-impl Cell {
-    fn tick(&mut self, neighbors: Vec<Cell>) {
-        match self.state {
-            State::Empty => return,
-            State::Head => self.state = State::Tail,
-            State::Tail => self.state = State::Wire,
-            State::Wire => {
-                let electron_heads = neighbors.iter().filter(|x| x.state == State::Head).count();
-                if electron_heads == 1 || electron_heads == 2 {
-                    self.state = State::Head;
-                }
-            },
-            _ => ()
-        }
-    }
-}
+const RES: u32 = 80;
 
 /*
  *  Drawing functions
@@ -53,9 +25,9 @@ fn put_pixel(x: u32, y: u32, color: Color, framedata: &mut Vec<u8>) {
 }
 
 fn draw_rect(x: u32, y: u32, w: u32, h: u32, color: Color, framedata: &mut Vec<u8>) {
-    for i in 0..w {
-        for j in 0..h {
-            put_pixel(x + i, y + j, color, framedata);
+    for i in 0..h {
+        for j in 0..w {
+            put_pixel(x + j, y + i, color, framedata);
         }
     }
 }
@@ -77,19 +49,29 @@ fn main() {
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    const BOARD_W: u32 = 64;
-    const BOARD_H: u32 = 64;
-
-    const res: u32 = WIDTH/BOARD_W;
+    const BOARD_W: u32 = WIDTH/RES;
+    const BOARD_H: u32 = HEIGHT/RES;
     
-    let mut old_board = [State::Empty; (BOARD_W*BOARD_H) as usize];
-    let mut new_board = [State::Head; (BOARD_W*BOARD_H) as usize];
+    let mut old_board = [State::Head; (BOARD_W*BOARD_H) as usize];
+    old_board = [
+        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
+        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
+        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
+        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
+        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
+        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
+        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
+        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
+        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
+        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire
+    ];
+    let mut new_board = old_board.clone();
 
     let mut last_time = Instant::now();
 
     let mut paused = true;
 
-    let dt = 0.0001;
+    let dt = 0.01;
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -105,31 +87,39 @@ fn main() {
             }
         }
 
-
         // wireworld loop
 
         if !paused {
-            for cell in new_board.iter_mut().filter(|x| **x != State::Empty) {
-                match cell {
-                    State::Head => *cell = State::Tail,
-                    State::Tail => *cell = State::Wire,
-                    State::Wire => *cell = State::Wire,
-                    _ => ()
+            for y in 0..BOARD_H {
+                for x in 0..BOARD_W {
+                    let index: usize = (x+y*BOARD_W) as usize;
+
+                    let neighbors = [(x-1, y-1), (x+0, y-1), (x+1, y-1),
+                                     (x-1, y+0), (x+0, y+0), (x+1, y+0),
+                                     (x-1, y+1), (x+0, y+1), (x+1, y+1),
+                    ];
+
+                    let count = neighbors
+                        .iter()
+                        .filter(|(x, y)| old_board[(x+y*BOARD_W) as usize] == State::Head)
+                        .count();
+                    new_board[index] = old_board[index].tick(count);
                 }
             }
+            old_board = new_board;
         }
 
         // draw loop
-        for i in 0..BOARD_H {
-            for j in 0..BOARD_W {
-                let color = match new_board[(i + j*BOARD_W) as usize] {
+        for y in 0..BOARD_H {
+            for x in 0..BOARD_W {
+                let color = match new_board[(x + y*BOARD_W) as usize] {
                     State::Empty => Color::BLACK,
                     State::Head => Color::CYAN,
                     State::Tail => Color::RED,
                     State::Wire => Color::YELLOW,
                 };
 
-                draw_rect(i*res, j*res, res-1, res-1, color, &mut framedata);
+                draw_rect(x*RES, y*RES, RES-1, RES-1, color, &mut framedata);
             }
         }
 

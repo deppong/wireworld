@@ -1,14 +1,24 @@
-#[derive(Clone, Copy)]
-enum State {
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+pub enum State {
     Empty,
     Head,
     Tail,
     Wire
 }
 
-#[derive(Clone, Copy)]
-pub struct Cell {
-    x: u32,
-    y: u32,
-    state: State,
+impl State {
+    pub fn tick(&self, neighbors: usize) -> State {
+        match self {
+            State::Empty => State::Empty,
+            State::Head => State::Tail,
+            State::Tail => State::Wire,
+            State::Wire => {
+                if neighbors == 1 || neighbors == 2 {
+                    State::Head
+                } else {
+                    State::Wire
+                }
+            },
+        }
+    }
 }
