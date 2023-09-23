@@ -1,6 +1,6 @@
 extern crate sdl2;
 
-use std::{time::*, thread};
+use std::time::*;
 
 use sdl2::mouse::MouseButton;
 use sdl2::pixels::PixelFormatEnum;
