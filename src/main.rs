@@ -13,7 +13,7 @@ use cell::*;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 800;
-const RES: u32 = 5;
+const RES: u32 = 20;
 
 /*
  *  Drawing functions
@@ -31,6 +31,18 @@ fn draw_rect(x: u32, y: u32, w: u32, h: u32, color: Color, framedata: &mut Vec<u
             put_pixel(x + j, y + i, color, framedata);
         }
     }
+}
+
+fn grid_from_mouse(x: i32, y: i32) -> (usize, usize) {
+    // annoying casting, if it works it works though, right?
+    let x = x as usize;
+    let y = y as usize;
+    let res = RES as usize;
+
+    ( 
+        if x > res { (x - res) / res + 1} else { 0 },
+        if y > res { (y - res) / res + 1} else { 0 }
+    )
 }
 
 // --------------------
@@ -53,16 +65,19 @@ fn main() {
     const BOARD_W: usize = (WIDTH/RES) as usize;
     const BOARD_H: usize = (HEIGHT/RES) as usize;
 
+    let mut next = Board::new(BOARD_W, BOARD_H);
     let mut current = Board::new(BOARD_W, BOARD_H);
-    let mut previous = Board::new(BOARD_W, BOARD_H);
-    previous.set(BOARD_W/2, BOARD_H/2, State::Head);
     current.set(BOARD_W/2, BOARD_H/2, State::Head);
+    next.set(BOARD_W/2, BOARD_H/2, State::Head);
     
     let mut last_time = Instant::now();
 
     let mut paused = true;
+    let mut drawing = false;
 
-    let dt = 0.0;
+    let dt = 0.1;
+
+    let mut pen: State = State::Wire;
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -72,10 +87,30 @@ fn main() {
                     break 'running;
                 },
 
-                Event::KeyDown { keycode: Some(Keycode::Space), .. } => { paused = !paused; break;},
+                Event::KeyDown { keycode, .. } => { 
+                    match keycode {
+                        Some(Keycode::Space) => paused = !paused,
+                        Some(Keycode::Num1) => pen = State::Empty,
+                        Some(Keycode::Num2) => pen = State::Wire,
+                        Some(Keycode::Num3) => pen = State::Head,
+                        Some(Keycode::Num4) => pen = State::Tail,
+                        _ => ()
+                    }
+                },
 
-                Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, ..} => {
-                    println!("{:?} {:?}", x, y);
+                Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, ..} => { 
+                    drawing = true; 
+                    let a = grid_from_mouse(x, y);
+                    current.set(a.0, a.1, pen);
+                }
+
+                Event::MouseButtonUp { mouse_btn: MouseButton::Left, ..} => { drawing = false; }
+
+                Event::MouseMotion {x, y, ..} => {
+                    if drawing {
+                        let a = grid_from_mouse(x, y);
+                        current.set(a.0, a.1, pen);
+                    }
                 }
 
                 _ => {}
@@ -84,13 +119,15 @@ fn main() {
 
         // wireworld loop
 
-        if !paused {
+        if !paused && Instant::now() - last_time > Duration::from_secs_f32(1.0 * dt){
             for y in 0..BOARD_H {
                 for x in 0..BOARD_W {
-                    current.set(x,y, previous.get(x, y).tick(previous.neighbors(x, y)));
+                    next.set(x,y, current.get(x, y).tick(current.neighbors(x, y)));
                 }
             }
-            previous = current.clone();
+            current = next.clone();
+            
+            last_time = Instant::now();
         }
 
         // draw loop
@@ -105,11 +142,6 @@ fn main() {
 
                 draw_rect(x as u32*RES, y as u32*RES, RES-1, RES-1, color, &mut framedata);
             }
-        }
-
-        if Instant::now() - last_time < Duration::from_secs_f32(1.0 * dt) {
-            thread::sleep(Duration::from_secs_f32(1.0 * dt) - (Instant::now() - last_time));
-            last_time = Instant::now();
         }
 
         canvas.clear();

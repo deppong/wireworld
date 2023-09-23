@@ -35,7 +35,7 @@ impl Board {
         Board {
             w: w,
             h: h,
-            data: vec![State::Wire; w*h]
+            data: vec![State::Empty; w*h]
         }
     }
 
