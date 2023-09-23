@@ -2,6 +2,7 @@ extern crate sdl2;
 
 use std::{time::*, thread};
 
+use sdl2::mouse::MouseButton;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::pixels::Color;
 use sdl2::event::Event;
@@ -12,7 +13,7 @@ use cell::*;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 800;
-const RES: u32 = 80;
+const RES: u32 = 5;
 
 /*
  *  Drawing functions
@@ -49,29 +50,19 @@ fn main() {
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    const BOARD_W: u32 = WIDTH/RES;
-    const BOARD_H: u32 = HEIGHT/RES;
-    
-    let mut old_board = [State::Head; (BOARD_W*BOARD_H) as usize];
-    old_board = [
-        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
-        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
-        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
-        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
-        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
-        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
-        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
-        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
-        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, 
-        State::Tail, State::Head, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire, State::Wire
-    ];
-    let mut new_board = old_board.clone();
+    const BOARD_W: usize = (WIDTH/RES) as usize;
+    const BOARD_H: usize = (HEIGHT/RES) as usize;
 
+    let mut current = Board::new(BOARD_W, BOARD_H);
+    let mut previous = Board::new(BOARD_W, BOARD_H);
+    previous.set(BOARD_W/2, BOARD_H/2, State::Head);
+    current.set(BOARD_W/2, BOARD_H/2, State::Head);
+    
     let mut last_time = Instant::now();
 
     let mut paused = true;
 
-    let dt = 0.01;
+    let dt = 0.0;
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -83,6 +74,10 @@ fn main() {
 
                 Event::KeyDown { keycode: Some(Keycode::Space), .. } => { paused = !paused; break;},
 
+                Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, ..} => {
+                    println!("{:?} {:?}", x, y);
+                }
+
                 _ => {}
             }
         }
@@ -92,34 +87,23 @@ fn main() {
         if !paused {
             for y in 0..BOARD_H {
                 for x in 0..BOARD_W {
-                    let index: usize = (x+y*BOARD_W) as usize;
-
-                    let neighbors = [(x-1, y-1), (x+0, y-1), (x+1, y-1),
-                                     (x-1, y+0), (x+0, y+0), (x+1, y+0),
-                                     (x-1, y+1), (x+0, y+1), (x+1, y+1),
-                    ];
-
-                    let count = neighbors
-                        .iter()
-                        .filter(|(x, y)| old_board[(x+y*BOARD_W) as usize] == State::Head)
-                        .count();
-                    new_board[index] = old_board[index].tick(count);
+                    current.set(x,y, previous.get(x, y).tick(previous.neighbors(x, y)));
                 }
             }
-            old_board = new_board;
+            previous = current.clone();
         }
 
         // draw loop
         for y in 0..BOARD_H {
             for x in 0..BOARD_W {
-                let color = match new_board[(x + y*BOARD_W) as usize] {
+                let color = match current.get(x, y) {
                     State::Empty => Color::BLACK,
                     State::Head => Color::CYAN,
                     State::Tail => Color::RED,
                     State::Wire => Color::YELLOW,
                 };
 
-                draw_rect(x*RES, y*RES, RES-1, RES-1, color, &mut framedata);
+                draw_rect(x as u32*RES, y as u32*RES, RES-1, RES-1, color, &mut framedata);
             }
         }
 

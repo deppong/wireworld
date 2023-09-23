@@ -1,6 +1,3 @@
-pub const BOARD_W: u32 = 800;
-pub const BOARD_H: u32 = 800;
-
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum State {
     Empty,
@@ -26,17 +23,42 @@ impl State {
     }
 }
 
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Board {
-    previous: [State; (BOARD_W*BOARD_H) as usize],
-    current: [State; (BOARD_W*BOARD_H) as usize]
+    data: Vec<State>,
+    w: usize,
+    h: usize,
 }
 
 impl Board {
-    pub fn get_previous(&self, x: u32, y: u32) -> State {
-        self.previous[(x + y * BOARD_W) as usize]
+    pub fn new(w: usize, h: usize) -> Self {
+        Board {
+            w: w,
+            h: h,
+            data: vec![State::Wire; w*h]
+        }
     }
 
-    pub fn get_current(&self, x: u32, y: u32) -> State {
-        self.current[(x + y * BOARD_W) as usize]
+    pub fn get(&self, x: usize, y: usize) -> State {
+        if x >= self.w || y >= self.h {
+            return State::Empty;
+        }
+        return self.data[x + y * self.w];
+    }
+
+    pub fn set(&mut self, x: usize, y: usize, state: State) {
+        if x > self.w || y > self.h {
+            panic!("darn"); 
+        }
+        self.data[x + y * self.w] = state;
+    }
+
+    pub fn neighbors(&self, x: usize, y: usize) -> usize {
+
+        let neighbors = [self.get(x-1, y-1),self.get(x-0, y-1),self.get(x+1, y-1),
+                                      self.get(x-1, y-0),self.get(x-0, y-0),self.get(x+1, y-0),
+                                      self.get(x-1, y+1),self.get(x-0, y+1),self.get(x+1, y+1) ];
+
+        neighbors.iter().filter(|x| **x == State::Head).count()
     }
 }
